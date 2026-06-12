@@ -35,6 +35,7 @@ bot.admin_ids = ADMIN_IDS
 async def on_ready():
     print(f"[BOT] Logged in as {bot.user} ({bot.user.id})")
     await bot.load_extension("cogs.nsfw")
+    await bot.load_extension("cogs.help")
     print("[BOT] Loaded cogs.nsfw")
 
 @bot.event
