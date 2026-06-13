@@ -181,27 +181,41 @@ class NSFWCog(commands.Cog):
                 f"`start` — bật auto-post\n"
                 f"`stop` — tắt auto-post\n"
                 f"`status` — xem config hiện tại\n"
-                f"`clearseen` — xóa lịch sử đã gửi"
+                f"`clearseen` — xóa lịch sử đã gửi\n"
+                f"Dùng `.help` để xem tất cả lệnh."
             )
 
-    @commands.command(name="nsfwhelp")
+    @commands.command(name="help")
     async def nsfw_help(self, ctx):
         embed = discord.Embed(title="🔞 NSFW Bot — Hướng dẫn", color=0xff4444)
         embed.add_field(
-            name="Commands",
+            name="📌 Lệnh chung",
             value=(
-                "`.nsfw [tags]` — lấy ảnh/gif/video\n"
-                "`.nsfwsetup ...` — cấu hình auto-post (admin)\n"
-                "`.nsfwhelp` — hiện menu này"
+                "`.nsfw [tags]` — lấy ảnh/gif/video ngẫu nhiên\n"
+                "`.help` — hiện menu này"
             ),
             inline=False
         )
         embed.add_field(
-            name="Nguồn hỗ trợ",
+            name="⚙️ Cấu hình Auto-post (Admin)",
+            value=(
+                "`.nsfwsetup channel #channel` — set channel auto-post\n"
+                "`.nsfwsetup source <tên ...>` — chọn nguồn\n"
+                "`.nsfwsetup tags [tags]` — filter tags\n"
+                "`.nsfwsetup interval <phút>` — tần suất (tối thiểu 5 phút)\n"
+                "`.nsfwsetup start` — bật auto-post\n"
+                "`.nsfwsetup stop` — tắt auto-post\n"
+                "`.nsfwsetup status` — xem config hiện tại\n"
+                "`.nsfwsetup clearseen` — xóa lịch sử đã gửi"
+            ),
+            inline=False
+        )
+        embed.add_field(
+            name="🌐 Nguồn hỗ trợ",
             value="`gelbooru` `rule34` `danbooru` `safebooru`",
             inline=False
         )
-        embed.set_footer(text="⚠️ Chỉ hoạt động trong NSFW channel")
+        embed.set_footer(text="⚠️ .nsfw chỉ hoạt động trong NSFW channel")
         await ctx.send(embed=embed)
 
     # ════════════════════════════════════════════════════
