@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timezone
-from utils.booru import fetch_post, VALID_SOURCES
+from utils.booru import fetch_post, VALID_SOURCES, DEFAULT_SOURCES
 
 def nsfw_only():
     async def predicate(ctx):
@@ -69,7 +69,7 @@ class NSFWCog(commands.Cog):
     @nsfw_only()
     async def nsfw_cmd(self, ctx, *, tags: str = ""):
         config = await self.get_config(ctx.guild.id)
-        sources = config.get("sources", ["gelbooru", "rule34"])
+        sources = config.get("sources", DEFAULT_SOURCES)
         seen = await self.get_seen(ctx.guild.id)
 
         async with ctx.typing():
@@ -145,7 +145,7 @@ class NSFWCog(commands.Cog):
             config = await self.get_config(ctx.guild.id)
             ch_id = config.get("channel_id")
             ch = ctx.guild.get_channel(ch_id) if ch_id else None
-            sources = config.get("sources", ["gelbooru", "rule34"])
+            sources = config.get("sources", DEFAULT_SOURCES)
             tags = config.get("tags", "(none)")
             interval = config.get("interval", 30)
             enabled = config.get("enabled", False)
@@ -187,7 +187,7 @@ class NSFWCog(commands.Cog):
             if not channel:
                 continue
 
-            sources = config.get("sources", ["gelbooru", "rule34"])
+            sources = config.get("sources", DEFAULT_SOURCES)
             tags = config.get("tags", "")
             seen = await self.get_seen(guild_id)
 
