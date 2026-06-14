@@ -7,7 +7,7 @@ def nsfw_only():
     async def predicate(ctx):
         if not ctx.channel.is_nsfw():
             await ctx.send("❌ Lệnh này chỉ dùng được trong NSFW channel.")
-            return False
+            raise commands.CheckFailure("Not NSFW channel")
         return True
     return commands.check(predicate)
 
@@ -26,6 +26,8 @@ class NSFWCog(commands.Cog):
         return doc or {}
 
     async def set_config(self, guild_id: int, data: dict):
+        # Luôn đảm bảo guild_id được lưu
+        data["guild_id"] = guild_id
         await self.db["nsfw_config"].update_one(
             {"guild_id": guild_id},
             {"$set": data},
@@ -37,11 +39,20 @@ class NSFWCog(commands.Cog):
         return set(doc.get("ids", [])) if doc else set()
 
     async def add_seen(self, guild_id: int, post_id: str):
+        # Giới hạn seen_ids tối đa 500 phần tử
         await self.db["nsfw_seen"].update_one(
             {"guild_id": guild_id},
             {"$addToSet": {"ids": post_id}},
             upsert=True
         )
+        doc = await self.db["nsfw_seen"].find_one({"guild_id": guild_id})
+        if doc and len(doc.get("ids", [])) > 500:
+            # Xóa 100 phần tử cũ nhất
+            trimmed = doc["ids"][100:]
+            await self.db["nsfw_seen"].update_one(
+                {"guild_id": guild_id},
+                {"$set": {"ids": trimmed}}
+            )
 
     async def send_post(self, channel: discord.TextChannel, post: dict):
         if post["type"] == "video":
@@ -92,6 +103,9 @@ class NSFWCog(commands.Cog):
 
         elif option == "source":
             chosen = [s.strip().lower() for s in value.split()]
+            if not chosen:
+                await ctx.send(f"❌ Dùng: `.setup source <sources>`\nValid: `{', '.join(VALID_SOURCES)}`")
+                return
             invalid = [s for s in chosen if s not in VALID_SOURCES]
             if invalid:
                 await ctx.send(f"❌ Nguồn không hợp lệ: `{', '.join(invalid)}`\nValid: `{', '.join(VALID_SOURCES)}`")
@@ -149,9 +163,7 @@ class NSFWCog(commands.Cog):
             await ctx.send("✅ Đã xóa lịch sử đã gửi.")
 
         else:
-            await ctx.send(
-                "❌ Option không hợp lệ. Dùng `.help` để xem hướng dẫn."
-            )
+            await ctx.send("❌ Option không hợp lệ. Dùng `.help` để xem hướng dẫn.")
 
     # ── Auto-post loop ────────────────────────────────────
 
@@ -161,6 +173,9 @@ class NSFWCog(commands.Cog):
 
         async for config in self.db["nsfw_config"].find({"enabled": True}):
             guild_id = config.get("guild_id")
+            if not guild_id:
+                continue
+
             channel_id = config.get("channel_id")
             interval = config.get("interval", 30)
             last_post = config.get("last_post", 0)
