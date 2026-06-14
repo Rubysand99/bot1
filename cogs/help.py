@@ -5,7 +5,7 @@ class HelpCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="help")
+    @commands.command(name="helpme")
     async def help_cmd(self, ctx):
         embed = discord.Embed(
             title="📖 Help Menu",
