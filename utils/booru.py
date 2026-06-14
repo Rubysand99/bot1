@@ -125,7 +125,7 @@ SOURCES = {
 VALID_SOURCES = list(SOURCES.keys())
 
 # Mặc định chỉ dùng NSFW sources
-DEFAULT_SOURCES = ["gelbooru", "rule34", "xbooru", "tbib", "konachan", "yandere"]
+DEFAULT_SOURCES = VALID_SOURCES
 
 def _get_type(url: str) -> str:
     url = url.lower()
