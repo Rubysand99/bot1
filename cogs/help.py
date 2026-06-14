@@ -5,39 +5,42 @@ class HelpCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="helpme")
+    @commands.command(name="help")
     async def help_cmd(self, ctx):
         embed = discord.Embed(
             title="📖 Help Menu",
+            description="Prefix: `.`",
             color=0xff4444
         )
         embed.add_field(
             name="🔞 NSFW",
             value=(
-                "`.nsfw [tags]` — lấy ảnh/gif/video\n"
-                "`.nsfwhelp` — hướng dẫn chi tiết NSFW"
+                "`.nsfw` — lấy ảnh/gif/video ngẫu nhiên\n"
+                "`.nsfw <tags>` — lấy theo tag cụ thể\n"
+                "　*Chỉ dùng trong NSFW channel*"
             ),
             inline=False
         )
         embed.add_field(
-            name="⚙️ Admin",
+            name="⚙️ Setup (Admin)",
             value=(
-                "`.nsfwsetup channel #ch` — set channel auto-post\n"
-                "`.nsfwsetup source <sources>` — chọn nguồn\n"
-                "`.nsfwsetup tags <tags>` — filter tags\n"
-                "`.nsfwsetup interval <phút>` — tần suất\n"
-                "`.nsfwsetup start/stop` — bật/tắt auto-post\n"
-                "`.nsfwsetup status` — xem config\n"
-                "`.nsfwsetup clearseen` — xóa lịch sử"
+                "`.setup channel #ch` — set channel auto-post\n"
+                "`.setup source <sources>` — chọn nguồn nội dung\n"
+                "`.setup tags <tags>` — filter tag mặc định\n"
+                "`.setup interval <phút>` — tần suất auto-post\n"
+                "`.setup start` — bật auto-post\n"
+                "`.setup stop` — tắt auto-post\n"
+                "`.setup status` — xem cấu hình hiện tại\n"
+                "`.setup clearseen` — xóa lịch sử đã gửi"
             ),
             inline=False
         )
         embed.add_field(
             name="🌐 Nguồn hỗ trợ",
-            value="`gelbooru` `rule34` `danbooru` `safebooru`",
+            value="`gelbooru`  `rule34`  `danbooru`  `safebooru`",
             inline=False
         )
-        embed.set_footer(text="⚠️ Lệnh NSFW chỉ dùng được trong NSFW channel")
+        embed.set_footer(text="⚠️ Lệnh NSFW chỉ hoạt động trong NSFW channel")
         await ctx.send(embed=embed)
 
 async def setup(bot):

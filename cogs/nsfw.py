@@ -1,10 +1,8 @@
 import discord
 from discord.ext import commands, tasks
-import asyncio
 from datetime import datetime, timezone
 from utils.booru import fetch_post, VALID_SOURCES
 
-# ── Helpers ──────────────────────────────────────────────
 def nsfw_only():
     async def predicate(ctx):
         if not ctx.channel.is_nsfw():
@@ -23,7 +21,6 @@ class NSFWCog(commands.Cog):
     def cog_unload(self):
         self.auto_post_loop.cancel()
 
-    # ── Lấy config của 1 guild ───────────────────────────
     async def get_config(self, guild_id: int) -> dict:
         doc = await self.db["nsfw_config"].find_one({"guild_id": guild_id})
         return doc or {}
@@ -35,7 +32,6 @@ class NSFWCog(commands.Cog):
             upsert=True
         )
 
-    # ── Lấy seen_ids của guild ───────────────────────────
     async def get_seen(self, guild_id: int) -> set:
         doc = await self.db["nsfw_seen"].find_one({"guild_id": guild_id})
         return set(doc.get("ids", [])) if doc else set()
@@ -47,30 +43,20 @@ class NSFWCog(commands.Cog):
             upsert=True
         )
 
-    # ── Gửi 1 post ra channel ────────────────────────────
     async def send_post(self, channel: discord.TextChannel, post: dict):
         if post["type"] == "video":
-            # Discord tự embed video nếu gửi direct link
             await channel.send(f"📹 `{post['source']}` | {post['url']}")
-        elif post["type"] == "gif":
-            embed = discord.Embed(color=0xff4444)
-            embed.set_image(url=post["url"])
-            embed.set_footer(text=f"🔞 {post['source']}")
-            await channel.send(embed=embed)
         else:
             embed = discord.Embed(color=0xff4444)
             embed.set_image(url=post["url"])
             embed.set_footer(text=f"🔞 {post['source']}")
             await channel.send(embed=embed)
 
-    # ════════════════════════════════════════════════════
-    # COMMANDS
-    # ════════════════════════════════════════════════════
+    # ── Commands ─────────────────────────────────────────
 
     @commands.command(name="nsfw")
     @nsfw_only()
     async def nsfw_cmd(self, ctx, *, tags: str = ""):
-        """Lấy ảnh/gif/video NSFW. Dùng: .nsfw [tags]"""
         config = await self.get_config(ctx.guild.id)
         sources = config.get("sources", ["gelbooru", "rule34"])
         seen = await self.get_seen(ctx.guild.id)
@@ -85,28 +71,25 @@ class NSFWCog(commands.Cog):
         await self.send_post(ctx.channel, post)
         await self.add_seen(ctx.guild.id, post["id"])
 
-    @commands.command(name="nsfwsetup")
-    async def nsfw_setup(self, ctx, option: str = "", *, value: str = ""):
-        """Setup auto-post. Chỉ admin dùng được."""
+    @commands.command(name="setup")
+    async def setup_cmd(self, ctx, option: str = "", *, value: str = ""):
         if ctx.author.id not in self.bot.admin_ids:
             await ctx.send("❌ Chỉ admin mới dùng được lệnh này.")
             return
 
         option = option.lower()
 
-        # .nsfwsetup channel #channel
         if option == "channel":
             if not ctx.message.channel_mentions:
-                await ctx.send("❌ Dùng: `.nsfwsetup channel #channel`")
+                await ctx.send("❌ Dùng: `.setup channel #channel`")
                 return
             ch = ctx.message.channel_mentions[0]
             if not ch.is_nsfw():
                 await ctx.send("❌ Channel đó không phải NSFW channel.")
                 return
             await self.set_config(ctx.guild.id, {"channel_id": ch.id})
-            await ctx.send(f"✅ Đã set channel auto-post: {ch.mention}")
+            await ctx.send(f"✅ Channel auto-post: {ch.mention}")
 
-        # .nsfwsetup source gelbooru rule34 danbooru
         elif option == "source":
             chosen = [s.strip().lower() for s in value.split()]
             invalid = [s for s in chosen if s not in VALID_SOURCES]
@@ -114,14 +97,12 @@ class NSFWCog(commands.Cog):
                 await ctx.send(f"❌ Nguồn không hợp lệ: `{', '.join(invalid)}`\nValid: `{', '.join(VALID_SOURCES)}`")
                 return
             await self.set_config(ctx.guild.id, {"sources": chosen})
-            await ctx.send(f"✅ Nguồn đã chọn: `{', '.join(chosen)}`")
+            await ctx.send(f"✅ Nguồn: `{', '.join(chosen)}`")
 
-        # .nsfwsetup tags hentai anime ...
         elif option == "tags":
             await self.set_config(ctx.guild.id, {"tags": value.strip()})
-            await ctx.send(f"✅ Tags đã set: `{value.strip() or '(none)'}`")
+            await ctx.send(f"✅ Tags: `{value.strip() or '(none)'}`")
 
-        # .nsfwsetup interval 30
         elif option == "interval":
             try:
                 mins = int(value.strip())
@@ -129,26 +110,23 @@ class NSFWCog(commands.Cog):
                     await ctx.send("❌ Interval tối thiểu 5 phút.")
                     return
             except ValueError:
-                await ctx.send("❌ Dùng: `.nsfwsetup interval <số phút>`")
+                await ctx.send("❌ Dùng: `.setup interval <số phút>`")
                 return
             await self.set_config(ctx.guild.id, {"interval": mins})
-            await ctx.send(f"✅ Interval: mỗi `{mins}` phút")
+            await ctx.send(f"✅ Interval: `{mins}` phút")
 
-        # .nsfwsetup start
         elif option == "start":
             config = await self.get_config(ctx.guild.id)
             if not config.get("channel_id"):
-                await ctx.send("❌ Chưa set channel. Dùng `.nsfwsetup channel #channel` trước.")
+                await ctx.send("❌ Chưa set channel. Dùng `.setup channel #channel` trước.")
                 return
             await self.set_config(ctx.guild.id, {"enabled": True})
             await ctx.send("✅ Auto-post đã bật!")
 
-        # .nsfwsetup stop
         elif option == "stop":
             await self.set_config(ctx.guild.id, {"enabled": False})
             await ctx.send("✅ Auto-post đã tắt.")
 
-        # .nsfwsetup status
         elif option == "status":
             config = await self.get_config(ctx.guild.id)
             ch_id = config.get("channel_id")
@@ -158,7 +136,7 @@ class NSFWCog(commands.Cog):
             interval = config.get("interval", 30)
             enabled = config.get("enabled", False)
 
-            embed = discord.Embed(title="📋 NSFW Auto-post Config", color=0xff4444)
+            embed = discord.Embed(title="📋 Auto-post Config", color=0xff4444)
             embed.add_field(name="Status", value="🟢 Đang chạy" if enabled else "🔴 Đã tắt")
             embed.add_field(name="Channel", value=ch.mention if ch else "Chưa set")
             embed.add_field(name="Nguồn", value=", ".join(sources))
@@ -166,65 +144,19 @@ class NSFWCog(commands.Cog):
             embed.add_field(name="Interval", value=f"{interval} phút")
             await ctx.send(embed=embed)
 
-        # .nsfwsetup clearseen
         elif option == "clearseen":
             await self.db["nsfw_seen"].delete_one({"guild_id": ctx.guild.id})
-            await ctx.send("✅ Đã xóa danh sách đã gửi.")
+            await ctx.send("✅ Đã xóa lịch sử đã gửi.")
 
         else:
             await ctx.send(
-                f"**Các option của `.nsfwsetup`:**\n"
-                f"`channel #channel` — set channel auto-post\n"
-                f"`source gelbooru rule34 ...` — chọn nguồn\n"
-                f"`tags [tags]` — filter tags\n"
-                f"`interval [phút]` — tần suất (min 5 phút)\n"
-                f"`start` — bật auto-post\n"
-                f"`stop` — tắt auto-post\n"
-                f"`status` — xem config hiện tại\n"
-                f"`clearseen` — xóa lịch sử đã gửi\n"
-                f"Dùng `.help` để xem tất cả lệnh."
+                "❌ Option không hợp lệ. Dùng `.help` để xem hướng dẫn."
             )
 
-    @commands.command(name="help")
-    async def nsfw_help(self, ctx):
-        embed = discord.Embed(title="🔞 NSFW Bot — Hướng dẫn", color=0xff4444)
-        embed.add_field(
-            name="📌 Lệnh chung",
-            value=(
-                "`.nsfw [tags]` — lấy ảnh/gif/video ngẫu nhiên\n"
-                "`.help` — hiện menu này"
-            ),
-            inline=False
-        )
-        embed.add_field(
-            name="⚙️ Cấu hình Auto-post (Admin)",
-            value=(
-                "`.nsfwsetup channel #channel` — set channel auto-post\n"
-                "`.nsfwsetup source <tên ...>` — chọn nguồn\n"
-                "`.nsfwsetup tags [tags]` — filter tags\n"
-                "`.nsfwsetup interval <phút>` — tần suất (tối thiểu 5 phút)\n"
-                "`.nsfwsetup start` — bật auto-post\n"
-                "`.nsfwsetup stop` — tắt auto-post\n"
-                "`.nsfwsetup status` — xem config hiện tại\n"
-                "`.nsfwsetup clearseen` — xóa lịch sử đã gửi"
-            ),
-            inline=False
-        )
-        embed.add_field(
-            name="🌐 Nguồn hỗ trợ",
-            value="`gelbooru` `rule34` `danbooru` `safebooru`",
-            inline=False
-        )
-        embed.set_footer(text="⚠️ .nsfw chỉ hoạt động trong NSFW channel")
-        await ctx.send(embed=embed)
-
-    # ════════════════════════════════════════════════════
-    # AUTO-POST LOOP
-    # ════════════════════════════════════════════════════
+    # ── Auto-post loop ────────────────────────────────────
 
     @tasks.loop(minutes=1)
     async def auto_post_loop(self):
-        """Chạy mỗi phút, check từng guild xem đến giờ post chưa."""
         now_ts = int(datetime.now(timezone.utc).timestamp())
 
         async for config in self.db["nsfw_config"].find({"enabled": True}):
